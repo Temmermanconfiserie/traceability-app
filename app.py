@@ -6,6 +6,7 @@ import psycopg2
 import bcrypt
 import io
 from functools import wraps
+import initial_setup # <-- Belangrijke import
 
 # --- PDF & Barcode Imports ---
 from reportlab.pdfgen import canvas
@@ -23,7 +24,7 @@ app.config['SECRET_KEY'] = 'een-zeer-geheim-wachtwoord-dat-niemand-mag-raden' # 
 # --- Login Manager Setup ---
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login' # Stuur niet-ingelogde gebruikers naar de /login pagina
+login_manager.login_view = 'login'
 
 class User(UserMixin):
     def __init__(self, id, username, role):
@@ -56,7 +57,7 @@ def get_db_connection():
     conn = psycopg2.connect(DATABASE_URL)
     return conn
 
-# --- Login & Logout Routes ---
+# --- Login, Logout & Setup Routes ---
 @app.route("/login", methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -64,14 +65,12 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("SELECT * FROM users WHERE username = %s;", (username,))
         user_data = cur.fetchone()
         cur.close()
         conn.close()
-
         if user_data and bcrypt.checkpw(password.encode('utf-8'), user_data['password'].encode('utf-8')):
             user = User(id=user_data['id'], username=user_data['username'], role=user_data['role'])
             login_user(user)
@@ -85,6 +84,11 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+@app.route("/setup-database-once/a1b2c3d4e5f6") # Dit is je geheime URL
+def run_initial_setup():
+    result = initial_setup.run_full_setup(DATABASE_URL)
+    return result
 
 # --- Beveiligde Pagina Routes ---
 @app.route("/")
