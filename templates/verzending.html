@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Nieuwe Verzending</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+        .form-section, .list-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px;}
+        input, select { padding: 8px; font-size: 1em; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+        button { padding: 10px; color: white; border: none; cursor: pointer; border-radius: 5px; }
+        a.button { display: inline-block; text-decoration: none; background-color: #6c757d; color: white; padding: 10px 15px; border-radius: 5px; margin-bottom: 20px; }
+        .add-lot-btn { background-color: #5a6268; }
+        #register-shipment-btn { background-color: #007bff; width: 100%; font-size: 1.2em; }
+        #available-lots, #shipment-list { list-style: none; padding: 0; }
+        #available-lots li, #shipment-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
+        .message { margin-top: 15px; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .success a { color: #155724; font-weight: bold; }
+        .error { background-color: #f8d7da; color: #721c24; }
+    </style>
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+</head>
+<body>
+    <a href="/" class="button">❮ Terug naar Home</a>
+    <h1>Nieuwe Verzending Registreren</h1>
+
+    <div id="message-area"></div>
+
+    <div class="form-section">
+        <label for="klant_naam">Klant:</label>
+        <input type="text" id="klant_naam" list="klanten-lijst" required>
+        <datalist id="klanten-lijst">
+             {% for klant in klanten %}
+                <option value="{{ klant.klantnaam }}" data-id="{{ klant.id }}"></option>
+            {% endfor %}
+        </datalist>
+        <label for="factuurnummer">Factuurnummer (optioneel):</label>
+        <input type="text" id="factuurnummer">
+    </div>
+
+    <div class="form-section">
+        <h2>1. Kies Product</h2>
+        <input type="text" id="product_naam" list="producten-lijst" placeholder="Begin te typen...">
+         <datalist id="producten-lijst">
+             {% for product in producten %}
+                <option value="{{ product.productnaam }}" data-ref="{{ product.referentie }}"></option>
+            {% endfor %}
+        </datalist>
+        <h2>2. Kies Beschikbare Lotnummers</h2>
+        <ul id="available-lots"></ul>
+    </div>
+
+    <div class="list-section">
+        <h2>3. Verzendlijst</h2>
+        <ul id="shipment-list"></ul>
+        <button type="button" id="register-shipment-btn">Registreer Definitieve Verzending</button>
+    </div>
+
+    <script>
+        const productInput = document.getElementById('product_naam');
+        const availableLotsList = document.getElementById('available-lots');
+        const shipmentList = document.getElementById('shipment-list');
+        const registerBtn = document.getElementById('register-shipment-btn');
+        const klantInput = document.getElementById('klant_naam');
+        const factuurnummerInput = document.getElementById('factuurnummer');
+
+        let shipment = { klant_id: null, factuurnummer: null, loten: [] };
+
+        productInput.addEventListener('input', async (e) => {
+            const productRefElement = document.querySelector(`#producten-lijst option[value="${e.target.value}"]`);
+            if (!productRefElement) {
+                availableLotsList.innerHTML = '';
+                return;
+            }
+            const productRef = productRefElement.dataset.ref;
+            availableLotsList.innerHTML = '<li>Laden...</li>';
+            const response = await fetch(`/api/voorraad/product/${productRef}`);
+            const availableBatches = await response.json();
+            availableLotsList.innerHTML = '';
+            if (availableBatches.length > 0) {
+                availableBatches.forEach(batch => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span>Lot: ${batch.nieuw_lotnummer} (Beschikbaar: ${batch.resterend_aantal})</span>
+                        <div>
+                            <input type="number" placeholder="Aantal" min="1" max="${batch.resterend_aantal}" style="width: 80px;">
+                            <button type="button" class="add-lot-btn" data-batch-id="${batch.id}" data-lot-nummer="${batch.nieuw_lotnummer}" data-product-naam="${batch.productnaam}">Voeg toe</button>
+                        </div>
+                    `;
+                    availableLotsList.appendChild(li);
+                });
+            } else {
+                availableLotsList.innerHTML = '<li>Geen voorraad gevonden voor dit product.</li>';
+            }
+        });
+        
+        availableLotsList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('add-lot-btn')) {
+                const button = e.target;
+                const aantalInput = button.previousElementSibling;
+                const aantal = parseInt(aantalInput.value, 10);
+                const maxAantal = parseInt(aantalInput.max, 10);
+                if (aantal > 0 && aantal <= maxAantal) {
+                    shipment.loten.push({
+                        batch_id: parseInt(button.dataset.batchId, 10),
+                        aantal: aantal,
+                        lot: button.dataset.lotNummer,
+                        naam: button.dataset.productNaam
+                    });
+                    renderShipmentList();
+                } else {
+                    alert('Voer een geldig aantal in (niet meer dan beschikbaar).');
+                }
+            }
+        });
+
+        function renderShipmentList() {
+            shipmentList.innerHTML = '';
+            shipment.loten.forEach(lot => {
+                const li = document.createElement('li');
+                li.textContent = `${lot.aantal} x ${lot.naam} (Lot: ${lot.lot})`;
+                shipmentList.appendChild(li);
+            });
+        }
+        
+        registerBtn.addEventListener('click', async () => {
+            const klantNaam = klantInput.value;
+            const klantElement = document.querySelector(`#klanten-lijst option[value="${klantNaam}"]`);
+            if (!klantElement) {
+                alert('Kies een geldige klant uit de lijst.');
+                return;
+            }
+            shipment.klant_id = parseInt(klantElement.dataset.id, 10);
+            shipment.factuurnummer = factuurnummerInput.value;
+            if (shipment.loten.length === 0) return alert('Voeg eerst loten toe aan de verzendlijst.');
+
+            const response = await fetch('/api/verzending', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(shipment)
+            });
+            const result = await response.json();
+            const messageArea = document.getElementById('message-area');
+            messageArea.innerHTML = '';
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+
+            if (response.ok) {
+                const zending_id = result.zending_id;
+                messageDiv.classList.add('success');
+                messageDiv.innerHTML = `
+                    <p>Verzending succesvol geregistreerd!</p>
+                    <a href="/api/verzending/${zending_id}/pdf" target="_blank">Print Pakbon</a>
+                `;
+                // Reset form
+                shipment = { klant_id: null, factuurnummer: null, loten: [] };
+                renderShipmentList();
+                availableLotsList.innerHTML = '';
+                productInput.value = '';
+                klantInput.value = '';
+                factuurnummerInput.value = '';
+            } else {
+                messageDiv.classList.add('error');
+                messageDiv.textContent = `Fout: ${result.message}`;
+            }
+            messageArea.appendChild(messageDiv);
+        });
+    </script>
+</body>
+</html>

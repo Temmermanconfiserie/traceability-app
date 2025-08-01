@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Traceability App</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header img { max-width: 150px; margin-bottom: 10px; }
+        h1 { color: #333; }
+        nav { background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-around; flex-wrap: wrap; }
+        nav a { text-decoration: none; color: #007bff; font-weight: bold; font-size: 1.2em; padding: 10px 15px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .stat-card { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
+        .stat-card h3 { margin-top: 0; color: #6c757d; }
+        .stat-card p { font-size: 2em; font-weight: bold; margin-bottom: 0; }
+        .list-section { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .list-section h2 { margin-top: 0; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border-bottom: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { color: #6c757d; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="{{ url_for('static', filename='icon-192x192.png') }}" alt="App Logo">
+            <h1>Traceability App</h1>
+        </div>
+        <nav>
+            <a href="/ontvangst">Ontvangst</a>
+            <a href="/productie">Productie</a>
+            <a href="/verzending">Verzending</a>
+            <a href="/rapport">Rapport</a>
+            <a href="/beheer/klanten">Beheer Klanten</a>
+            <a href="/beheer/producten">Beheer Producten</a>
+            <a href="/beheer/leveranciers">Beheer Leveranciers</a>
+        </nav>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Totaal Klanten</h3>
+                <p>{{ stats.klanten_aantal }}</p>
+            </div>
+            <div class="stat-card">
+                <h3>Soorten Producten</h3>
+                <p>{{ stats.producten_aantal }}</p>
+            </div>
+            <div class="stat-card">
+                <h3>Totaal Voorraad (kg)</h3>
+                <p>{{ "%.2f"|format(stats.totaal_voorraad_kg or 0) }}</p>
+            </div>
+        </div>
+
+        <div class="list-section">
+            <h2>Recente Verzendingen</h2>
+            <table>
+                <thead><tr><th>Lotnummer</th><th>Product</th><th>Aantal</th><th>Klant</th><th>Datum</th></tr></thead>
+                <tbody>
+                    {% for s in recente_verzendingen %}
+                    <tr>
+                        <td>{{ s.nieuw_lotnummer }}</td>
+                        <td>{{ s.productnaam }}</td>
+                        <td>{{ s.aantal_eenheden }}</td>
+                        <td>{{ s.klantnaam }}</td>
+                        <td>{{ s.verzend_datum.strftime('%d-%m-%Y %H:%M') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5">Nog geen verzendingen geregistreerd.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

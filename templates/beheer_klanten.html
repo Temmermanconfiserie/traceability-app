@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Klantenbeheer - Traceability App</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+        a.button { display: inline-block; text-decoration: none; background-color: #6c757d; color: white; padding: 10px 15px; border-radius: 5px; margin-bottom: 20px; }
+        .form-section, .list-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; }
+    </style>
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+</head>
+<body>
+    <a href="/" class="button">❮ Terug naar Dashboard</a>
+    <h1>Klantenbeheer</h1>
+
+    <div class="form-section">
+        <h2>Nieuwe Klant Toevoegen</h2>
+        <form id="add-klant-form">
+            <label for="klantnaam">Klantnaam:</label>
+            <input type="text" id="klantnaam" required>
+            <button type="submit">Voeg Toe</button>
+        </form>
+    </div>
+
+    <div class="list-section">
+        <h2>Bestaande Klanten</h2>
+        <table>
+            <thead><tr><th>ID</th><th>Klantnaam</th></tr></thead>
+            <tbody>
+                {% for klant in klanten %}
+                <tr>
+                    <td>{{ klant.id }}</td>
+                    <td>{{ klant.klantnaam }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.getElementById('add-klant-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const naam = document.getElementById('klantnaam').value;
+            const response = await fetch('/api/klanten', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ klantnaam: naam })
+            });
+            if (response.ok) {
+                window.location.reload(); // Reload the page to show the new customer
+            } else {
+                const result = await response.json();
+                alert(`Fout: ${result.message}`);
+            }
+        });
+    </script>
+</body>
+</html>

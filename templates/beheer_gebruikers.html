@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Gebruikersbeheer - Traceability App</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+        a.button { display: inline-block; text-decoration: none; background-color: #6c757d; color: white; padding: 10px 15px; border-radius: 5px; margin-bottom: 20px; }
+        .form-section, .list-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; }
+    </style>
+</head>
+<body>
+    <a href="/" class="button">❮ Terug naar Dashboard</a>
+    <h1>Gebruikersbeheer</h1>
+
+    <div class="form-section">
+        <h2>Nieuwe Gebruiker Toevoegen</h2>
+        <form id="add-user-form">
+            <label for="username">Gebruikersnaam:</label>
+            <input type="text" id="username" required>
+            <label for="password">Wachtwoord:</label>
+            <input type="password" id="password" required>
+            <button type="submit">Voeg Toe</button>
+        </form>
+    </div>

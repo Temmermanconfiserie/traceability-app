@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Nieuwe Ontvangst</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; }
+        form { display: grid; gap: 10px; }
+        label { font-weight: bold; }
+        input, select { padding: 8px; font-size: 1em; }
+        button { padding: 10px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+        a.button { display: inline-block; text-decoration: none; background-color: #6c757d; color: white; padding: 10px 15px; border-radius: 5px; margin-bottom: 20px; }
+        #message { margin-top: 15px; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+    </style>
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+</head>>
+<body>
+    <a href="/" class="button">❮ Terug naar Home</a>
+    <h1>Nieuwe Ontvangst Registreren</h1>
+    <form id="ontvangst-form">
+        <label for="ean_code">EAN Code (Scan hier):</label>
+        <input type="text" id="ean_code" name="ean_code" required autofocus>
+
+        <label for="product_naam">Productnaam:</label>
+        <input type="text" id="product_naam" name="product_naam" list="producten-lijst" required>
+        <datalist id="producten-lijst">
+            {% for p in producten %}
+                <option data-ean="{{ p.ean_code }}">{{ p.productnaam }}</option>
+            {% endfor %}
+        </datalist>
+
+        <label for="leverancier_naam">Leverancier:</label>
+        <input type="text" id="leverancier_naam" name="leverancier_naam" list="leveranciers-lijst" required>
+        <datalist id="leveranciers-lijst">
+            {% for l in leveranciers %}
+                <option>{{ l.naam }}</option>
+            {% endfor %}
+        </datalist>
+
+        <label for="lotnummer_leverancier">Lotnummer Leverancier:</label>
+        <input type="text" id="lotnummer_leverancier" name="lotnummer_leverancier" required>
+
+        <label for="tht">THT:</label>
+        <input type="date" id="tht" name="tht" required>
+
+        <label for="gewicht_kg">Gewicht (kg):</label>
+        <input type="number" step="0.01" id="gewicht_kg" name="gewicht_kg" required>
+
+        <button type="submit">Registreer Ontvangst</button>
+    </form>
+    <div id="message"></div>
+
+    <script>
+        const eanInput = document.getElementById('ean_code');
+        const productInput = document.getElementById('product_naam');
+        const productOptions = document.querySelectorAll('#producten-lijst option');
+
+        // Sync Product Name -> EAN
+        productInput.addEventListener('input', (e) => {
+            for (const option of productOptions) {
+                if (option.value === e.target.value) {
+                    eanInput.value = option.dataset.ean;
+                    break;
+                }
+            }
+        });
+
+        // Sync EAN -> Product Name
+        eanInput.addEventListener('input', (e) => {
+            let found = false;
+            for (const option of productOptions) {
+                if (String(option.dataset.ean).trim() === String(e.target.value).trim()) {
+                    productInput.value = option.value;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                productInput.value = '';
+            }
+        });
+
+        // Form submission script
+        document.getElementById('ontvangst-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const formData = { ean_code: eanInput.value, product_naam: productInput.value, leverancier_naam: document.getElementById('leverancier_naam').value, lotnummer_leverancier: document.getElementById('lotnummer_leverancier').value, tht: document.getElementById('tht').value, gewicht_kg: parseFloat(document.getElementById('gewicht_kg').value) };
+            const messageDiv = document.getElementById('message');
+            try {
+                const response = await fetch('/api/ontvangst', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
+                const result = await response.json();
+                if (response.ok) {
+                    messageDiv.textContent = result.message;
+                    messageDiv.className = 'success';
+                    document.getElementById('ontvangst-form').reset();
+                    eanInput.focus();
+                } else {
+                    messageDiv.textContent = 'Fout: ' + result.message;
+                    messageDiv.className = 'error';
+                }
+            } catch (error) {
+                messageDiv.textContent = 'Netwerkfout bij het versturen van de data.';
+                messageDiv.className = 'error';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Traceerbaarheid Rapport</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+        .search-section, .results-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        input { padding: 8px; font-size: 1em; width: calc(100% - 100px); }
+        button { padding: 10px; font-size: 1em; width: 90px; }
+        a.button { display: inline-block; text-decoration: none; background-color: #6c757d; color: white; padding: 10px 15px; border-radius: 5px; margin-bottom: 20px; }
+        a.pdf-button { background-color: #28a745; margin-top: 15px;}
+        h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .result-box { padding: 15px; background-color: #f8f9fa; border-radius: 5px; }
+        .result-box h3 { margin-top: 0; }
+        .result-box ul { padding-left: 20px; margin: 0; }
+        #ingredient-list li { margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+</head>
+<body>
+    <a href="/" class="button">❮ Terug naar Home</a>
+    <h1>Traceerbaarheid Rapporten</h1>
+
+    <div class="search-section">
+        <form id="trace-lot-form">
+            <label for="lotnummer"><b>Zoek op specifiek Lotnummer:</b></label><br><br>
+            <input type="text" id="lotnummer" name="lotnummer" placeholder="bv. L250731..." required>
+            <button type="submit">Zoek</button>
+        </form>
+    </div>
+    
+    <div class="search-section">
+        <form id="trace-product-form">
+            <label for="product_naam"><b>Zoek alle batches voor een Product:</b></label><br><br>
+            <input type="text" id="product_naam" name="product_naam" list="producten-lijst" placeholder="Begin te typen..." required>
+            <datalist id="producten-lijst">
+                {% for p in producten %}
+                    <option value="{{ p.productnaam }}" data-ref="{{ p.referentie }}"></option>
+                {% endfor %}
+            </datalist>
+            <button type="submit">Zoek</button>
+        </form>
+    </div>
+
+    <div id="results-section" class="results-section" style="display: none;"></div>
+
+    <script>
+        const lotForm = document.getElementById('trace-lot-form');
+        const productForm = document.getElementById('trace-product-form');
+        const resultsSection = document.getElementById('results-section');
+
+        lotForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const lotnummer = document.getElementById('lotnummer').value;
+            const response = await fetch(`/api/rapport/lot/${lotnummer}`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                let resultsHTML = `
+                    <h2>Resultaten voor Lotnummer ${data.batch.nieuw_lotnummer}</h2>
+                    <div class="results-grid">
+                        <div class="result-box">
+                            <h3>Uitgaand Product</h3>
+                            <p><b>Product:</b> ${data.batch.productnaam}</p>
+                            <p><b>Aantal:</b> ${data.batch.aantal_eenheden} stuks</p>
+                            <p><b>THT:</b> ${new Date(data.batch.nieuwe_tht).toLocaleDateString('nl-BE')}</p>
+                            <p><b>Productiedatum:</b> ${new Date(data.batch.productie_datum).toLocaleString('nl-BE')}</p>
+                        </div>
+                        <div class="result-box">
+                            <h3>Verzending</h3>
+                            <p><b>Klant:</b> ${data.verzending.klantnaam}</p>
+                            <p><b>Factuurnummer:</b> ${data.verzending.factuurnummer || 'N/A'}</p>
+                            <p><b>Verzenddatum:</b> ${new Date(data.verzending.verzend_datum).toLocaleString('nl-BE')}</p>
+                        </div>
+                    </div>
+                    <div class="result-box" style="margin-top: 20px;">
+                        <h3>Gebruikte Ingrediënten</h3>
+                        <ul id="ingredient-list">`;
+                
+                data.componenten.forEach(comp => {
+                    resultsHTML += `
+                        <li>
+                            <b>${comp.productnaam}</b> (${comp.gebruikt_gewicht_kg} kg gebruikt)<br>
+                            Leverancier: ${comp.leverancier_naam}<br>
+                            Origineel Lot: ${comp.lotnummer_leverancier}, Originele THT: ${new Date(comp.tht_leverancier).toLocaleDateString('nl-BE')}
+                        </li>`;
+                });
+
+                resultsHTML += `</ul></div><a href="/api/rapport/lot/${lotnummer}/pdf" class="button pdf-button" target="_blank">Download PDF</a>`;
+                resultsSection.innerHTML = resultsHTML;
+                resultsSection.style.display = 'block';
+
+            } else {
+                alert('Lotnummer niet gevonden.');
+                resultsSection.style.display = 'none';
+            }
+        });
+
+        productForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const productName = document.getElementById('product_naam').value;
+            const productRefElement = document.querySelector(`#producten-lijst option[value="${productName}"]`);
+            
+            if (!productRefElement) {
+                alert('Selecteer een geldig product uit de lijst.');
+                return;
+            }
+            const productRef = productRefElement.dataset.ref;
+            
+            const response = await fetch(`/api/rapport/product/${productRef}`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                let tableHTML = `<h2>Productiebatches voor ${productName}</h2>`;
+                if (data.length === 0) {
+                    tableHTML += '<p>Nog geen productiebatches gevonden voor dit product.</p>';
+                } else {
+                    tableHTML += `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Lotnummer</th>
+                                    <th>Productiedatum</th>
+                                    <th>THT</th>
+                                    <th>Aantal</th>
+                                    <th>Klant</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                    data.forEach(batch => {
+                        tableHTML += `
+                            <tr>
+                                <td>${batch.nieuw_lotnummer}</td>
+                                <td>${new Date(batch.productie_datum).toLocaleDateString('nl-BE')}</td>
+                                <td>${new Date(batch.nieuwe_tht).toLocaleDateString('nl-BE')}</td>
+                                <td>${batch.aantal_eenheden}</td>
+                                <td>${batch.klantnaam || 'N/A'}</td>
+                            </tr>`;
+                    });
+                    tableHTML += `</tbody></table>`;
+                }
+                resultsSection.innerHTML = tableHTML;
+                resultsSection.style.display = 'block';
+            } else {
+                alert('Product niet gevonden of er is een fout opgetreden.');
+                resultsSection.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
