@@ -179,7 +179,6 @@ def voorraad_pagina():
 @app.route("/winkelverkoop")
 @login_required
 def winkelverkoop_pagina():
-    """Toont de winkelverkoop pagina."""
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     cur.execute("SELECT referentie, productnaam FROM Inkomende_Producten ORDER BY productnaam;")
