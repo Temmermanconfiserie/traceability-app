@@ -163,7 +163,7 @@ def voorraad_pagina():
     cur.execute("""
         SELECT ip.productnaam, SUM(vi.resterend_gewicht_kg) as totaal_resterend
         FROM Voorraad_Inkomend vi JOIN Inkomende_Producten ip ON vi.inkomend_product_id = ip.id
-        GROUP BY ip.productnaam HAVING SUM(vi.resterend_gewicht_kg) > 0 ORDER BY ip.productnaam;
+        GROUP BY ip.productnaam HAVING SUM(vi.resterend_gewicht_kg) > 0.01 ORDER BY ip.productnaam;
     """)
     inkomende_voorraad = cur.fetchall()
     cur.execute("""
@@ -175,6 +175,18 @@ def voorraad_pagina():
     cur.close()
     conn.close()
     return render_template("voorraad.html", inkomende_voorraad=inkomende_voorraad, afgewerkte_voorraad=afgewerkte_voorraad)
+
+@app.route("/winkelverkoop")
+@login_required
+def winkelverkoop_pagina():
+    """Toont de winkelverkoop pagina."""
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT referentie, productnaam FROM Inkomende_Producten ORDER BY productnaam;")
+    producten = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("winkelverkoop.html", producten=producten)
 
 @app.route("/beheer/klanten")
 @login_required
