@@ -176,16 +176,17 @@ def voorraad_pagina():
     conn.close()
     return render_template("voorraad.html", inkomende_voorraad=inkomende_voorraad, afgewerkte_voorraad=afgewerkte_voorraad)
 
-@app.route("/winkelverkoop")
+@app.route("/voorraadcorrecties")
 @login_required
-def winkelverkoop_pagina():
+def voorraadcorrecties_pagina():
+    """Toont de pagina voor winkelverkoop en vervallen producten."""
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     cur.execute("SELECT referentie, productnaam FROM Inkomende_Producten ORDER BY productnaam;")
     producten = cur.fetchall()
     cur.close()
     conn.close()
-    return render_template("winkelverkoop.html", producten=producten)
+    return render_template("voorraad_correcties.html", producten=producten)
 
 @app.route("/beheer/klanten")
 @login_required
@@ -525,6 +526,39 @@ def api_winkelverkoop():
     finally:
         if conn is not None:
             conn.close()
+
+@app.route('/api/voorraad/inkomend/<string:referentie>')
+@login_required
+def get_inkomende_voorraad(referentie):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("""
+        SELECT COALESCE(SUM(vi.resterend_gewicht_kg), 0) as totaal_resterend
+        FROM Voorraad_Inkomend vi
+        JOIN Inkomende_Producten ip ON vi.inkomend_product_id = ip.id
+        WHERE ip.referentie = %s;
+    """, (referentie,))
+    voorraad = cur.fetchone()
+    cur.close()
+    conn.close()
+    return jsonify(voorraad)
+
+@app.route('/api/batches/inkomend/<string:referentie>')
+@login_required
+def get_inkomende_batches(referentie):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("""
+        SELECT vi.id, vi.lotnummer_leverancier, vi.tht_leverancier, vi.resterend_gewicht_kg
+        FROM Voorraad_Inkomend vi
+        JOIN Inkomende_Producten ip ON vi.inkomend_product_id = ip.id
+        WHERE ip.referentie = %s AND vi.resterend_gewicht_kg > 0.01
+        ORDER BY vi.tht_leverancier ASC;
+    """, (referentie,))
+    batches = cur.fetchall()
+    cur.close()
+    conn.close()
+    return jsonify(batches)
 
 @app.route("/api/voorraad/verwijder", methods=['POST'])
 @login_required
