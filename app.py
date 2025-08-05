@@ -6,7 +6,6 @@ import psycopg2
 import bcrypt
 import io
 from functools import wraps
-import initial_setup # Belangrijke import
 
 # --- PDF & Barcode Imports ---
 from reportlab.pdfgen import canvas
@@ -84,11 +83,6 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('login'))
-    
-@app.route("/setup-database-once/a1b2c3d4e5f6") # Dit is je geheime URL
-def run_initial_setup():
-    result = initial_setup.run_full_setup(DATABASE_URL)
-    return result
 
 # --- Beveiligde Pagina Routes ---
 @app.route("/")

@@ -3,10 +3,10 @@ import psycopg2
 DATABASE_URL = "postgresql://neondb_owner:npg_sU7B0wLzIqVp@ep-soft-frost-a2dtyc79-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
 def setup_database():
-    """Zet de volledige database op, inclusief de nieuwe users tabel."""
+    """Zet de volledige database op, inclusief de nieuwe Voorraad_Correcties tabel."""
     
-    # Verwijder tabellen in omgekeerde volgorde van aanmaak om conflicten te vermijden
     drop_commands = (
+        "DROP TABLE IF EXISTS Voorraad_Correcties CASCADE;",
         "DROP TABLE IF EXISTS users CASCADE;",
         "DROP TABLE IF EXISTS Lot_Sequence CASCADE;",
         "DROP TABLE IF EXISTS Verzendingen CASCADE;",
@@ -21,7 +21,6 @@ def setup_database():
         "DROP TABLE IF EXISTS Leveranciers CASCADE;"
     )
 
-    # Maak tabellen aan in volgorde van afhankelijkheid
     create_commands = (
         """
         CREATE TABLE users (
@@ -130,27 +129,31 @@ def setup_database():
             factuurnummer VARCHAR(100),
             verzend_datum TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+        """,
+        """
+        CREATE TABLE Voorraad_Correcties (
+            id SERIAL PRIMARY KEY,
+            voorraad_inkomend_id INTEGER NOT NULL REFERENCES Voorraad_Inkomend(id),
+            aanpassing_kg NUMERIC(10, 2) NOT NULL,
+            reden VARCHAR(255) NOT NULL,
+            correctie_datum TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
         """
     )
     
     conn = None
     try:
-        print("Verbinding maken met de database...")
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
-        
         print("Oude tabellen verwijderen (indien aanwezig)...")
         for command in drop_commands:
             cur.execute(command)
-
         print("Nieuwe tabellen aanmaken...")
         for command in create_commands:
             cur.execute(command)
-        
         cur.close()
         conn.commit()
         print("✅ Database succesvol opgezet met de definitieve structuur!")
-
     except (Exception, psycopg2.DatabaseError) as error:
         print(f"❌ Fout: {error}")
     finally:

@@ -9,8 +9,10 @@
         .header { text-align: center; margin-bottom: 20px; }
         .header img { max-width: 150px; margin-bottom: 10px; }
         h1 { color: #333; }
-        nav { background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-around; flex-wrap: wrap; }
-        nav a { text-decoration: none; color: #007bff; font-weight: bold; font-size: 1.2em; padding: 10px 15px; }
+        nav { background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; }
+        .nav-row { display: flex; justify-content: center; flex-wrap: wrap; width: 100%; }
+        .nav-row:first-child { margin-bottom: 15px; }
+        nav a { text-decoration: none; color: #007bff; font-weight: bold; font-size: 1.2em; padding: 10px 15px; margin: 5px; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
         .stat-card { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
         .stat-card h3 { margin-top: 0; color: #6c757d; }
@@ -26,16 +28,22 @@
     <div class="container">
         <div class="header">
             <img src="{{ url_for('static', filename='icon-192x192.png') }}" alt="App Logo">
-            <h1>Traceability App</h1>
+            <h1>TEST - ZIE JE DEZE NIEUWE TITEL?</h1>
         </div>
         <nav>
-            <a href="/ontvangst">Ontvangst</a>
-            <a href="/productie">Productie</a>
-            <a href="/verzending">Verzending</a>
-            <a href="/rapport">Rapport</a>
-            <a href="/beheer/klanten">Beheer Klanten</a>
-            <a href="/beheer/producten">Beheer Producten</a>
-            <a href="/beheer/leveranciers">Beheer Leveranciers</a>
+            <div class="nav-row">
+                <a href="/ontvangst">Ontvangst</a>
+                <a href="/productie">Productie</a>
+                <a href="/verzending">Verzending</a>
+                <a href="/rapport">Rapport</a>
+                <a href="/voorraad">Voorraad</a>
+            </div>
+            <div class="nav-row">
+                <a href="/beheer/klanten">Beheer Klanten</a>
+                <a href="/beheer/producten">Beheer Producten</a>
+                <a href="/beheer/leveranciers">Beheer Leveranciers</a>
+                <a href="/beheer/gebruikers">Beheer Gebruikers</a>
+            </div>
         </nav>
 
         <div class="stats-grid">
