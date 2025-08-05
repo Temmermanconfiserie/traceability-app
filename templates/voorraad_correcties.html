@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Voorraadcorrecties - Traceability App</title>
+    <style>
+        body { font-family: sans-serif; max-width: 900px; margin: auto; padding: 20px; }
+        a.button { display: inline-block; text-decoration: none; background-color: #6c757d; color: white; padding: 10px 15px; border-radius: 5px; margin-bottom: 20px; }
+        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .form-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; align-items: end; }
+        input, select, button { padding: 8px; font-size: 1em; width: 100%; box-sizing: border-box; }
+        button { color: white; border: none; cursor: pointer; }
+        #stock-display { font-style: italic; color: #555; margin-bottom: 10px; }
+        #expired-batches-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
+        .remove-btn { background-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <a href="/" class="button">❮ Terug naar Dashboard</a>
+    <h1>Voorraadcorrecties</h1>
+
+    <!-- Sectie voor Winkelverkoop -->
+    <div class="section">
+        <h2>Winkelverkoop (los)</h2>
+        <form id="verkoop-form">
+            <label for="product_naam_verkoop"><b>Product (Bulk):</b></label>
+            <input type="text" id="product_naam_verkoop" list="producten-lijst" required>
+            <datalist id="producten-lijst">
+                {% for product in producten %}
+                    <option value="{{ product.productnaam }}" data-ref="{{ product.referentie }}"></option>
+                {% endfor %}
+            </datalist>
+            
+            <div id="stock-display">Selecteer een product om de voorraad te zien...</div>
+
+            <div class="form-grid">
+                <div>
+                    <label for="gewicht_kg"><b>Verkocht Gewicht (kg):</b></label>
+                    <input type="number" step="0.001" id="gewicht_kg" required>
+                </div>
+                <button type="submit" style="background-color: #17a2b8;">Verkoop Registreren</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Sectie voor Vervallen Producten -->
+    <div class="section">
+        <h2>Vervallen Producten Verwijderen</h2>
+        <label for="product_naam_vervallen"><b>Kies Product:</b></label>
+        <input type="text" id="product_naam_vervallen" list="producten-lijst">
+        
+        <h3>Beschikbare Batches (oudste eerst)</h3>
+        <ul id="expired-batches-list"></ul>
+    </div>
+
+    <script>
+        // --- Algemene elementen ---
+        const productVerkoopInput = document.getElementById('product_naam_verkoop');
+        const stockDisplay = document.getElementById('stock-display');
+        
+        // --- Winkelverkoop Logica ---
+        productVerkoopInput.addEventListener('input', async (e) => {
+            const productRefElement = document.querySelector(`#producten-lijst option[value="${e.target.value}"]`);
+            if (!productRefElement) {
+                stockDisplay.textContent = 'Selecteer een product om de voorraad te zien...';
+                return;
+            }
+            const productRef = productRefElement.dataset.ref;
+            const response = await fetch(`/api/voorraad/inkomend/${productRef}`);
+            const data = await response.json();
+            stockDisplay.textContent = `Huidige voorraad: ${data.totaal_resterend.toFixed(2)} kg`;
+        });
+
+        document.getElementById('verkoop-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            // ... (logica om verkoop te submitten, zie app.py) ...
+        });
+
+        // --- Vervallen Producten Logica ---
+        const productVervallenInput = document.getElementById('product_naam_vervallen');
+        const expiredBatchesList = document.getElementById('expired-batches-list');
+
+        productVervallenInput.addEventListener('input', async (e) => {
+            const productRefElement = document.querySelector(`#producten-lijst option[value="${e.target.value}"]`);
+            if (!productRefElement) {
+                expiredBatchesList.innerHTML = '';
+                return;
+            }
+            const productRef = productRefElement.dataset.ref;
+            const response = await fetch(`/api/batches/inkomend/${productRef}`);
+            const batches = await response.json();
+            
+            expiredBatchesList.innerHTML = '';
+            if (batches.length > 0) {
+                batches.forEach(batch => {
+                    const li = document.createElement('li');
+                    const tht = new Date(batch.tht_leverancier).toLocaleDateString('nl-BE');
+                    li.innerHTML = `
+                        <span>Lot: ${batch.lotnummer_leverancier} | THT: ${tht} | Resterend: ${batch.resterend_gewicht_kg} kg</span>
+                        <button class="remove-btn" data-batch-id="${batch.id}">Verwijder</button>
+                    `;
+                    expiredBatchesList.appendChild(li);
+                });
+            } else {
+                expiredBatchesList.innerHTML = '<li>Geen batches gevonden voor dit product.</li>';
+            }
+        });
+
+        expiredBatchesList.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('remove-btn')) {
+                const batchId = e.target.dataset.batchId;
+                if (confirm('Weet je zeker dat je deze volledige batch wilt verwijderen?')) {
+                    const response = await fetch('/api/voorraad/verwijder', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ batch_id: batchId })
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        alert(result.message);
+                        productVervallenInput.dispatchEvent(new Event('input')); // Refresh de lijst
+                    } else {
+                        alert(`Fout: ${result.message}`);
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

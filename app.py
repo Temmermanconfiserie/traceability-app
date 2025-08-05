@@ -18,7 +18,7 @@ from reportlab.graphics import renderPDF
 # --- App Configuratie ---
 DATABASE_URL = "postgresql://neondb_owner:npg_sU7B0wLzIqVp@ep-soft-frost-a2dtyc79-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'een-zeer-geheim-wachtwoord-dat-niemand-mag-raden' # Verander dit in een willekeurige string
+app.config['SECRET_KEY'] = 'een-zeer-geheim-wachtwoord-dat-niemand-mag-raden'
 
 # --- Login Manager Setup ---
 login_manager = LoginManager()
@@ -483,6 +483,76 @@ def verzending_producten_new():
     finally:
         if conn is not None: conn.close()
 
+@app.route("/api/winkelverkoop", methods=['POST'])
+@login_required
+def api_winkelverkoop():
+    data = request.get_json()
+    product_ref = data.get('referentie')
+    verkocht_kg = float(data.get('gewicht_kg'))
+
+    if not product_ref or not verkocht_kg or verkocht_kg <= 0:
+        return jsonify(status="error", message="Product en een geldig gewicht zijn verplicht."), 400
+
+    conn = get_db_connection()
+    try:
+        with conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT id FROM Inkomende_Producten WHERE referentie = %s;", (product_ref,))
+                product = cur.fetchone()
+                if not product: raise Exception("Product niet gevonden.")
+                product_id = product['id']
+
+                cur.execute(
+                    "SELECT id, resterend_gewicht_kg FROM Voorraad_Inkomend WHERE inkomend_product_id = %s AND resterend_gewicht_kg > 0 ORDER BY tht_leverancier ASC LIMIT 1 FOR UPDATE;",
+                    (product_id,)
+                )
+                batch = cur.fetchone()
+                if not batch or batch['resterend_gewicht_kg'] < verkocht_kg:
+                    raise Exception("Onvoldoende voorraad in de oudste batch voor dit product.")
+                
+                cur.execute(
+                    "UPDATE Voorraad_Inkomend SET resterend_gewicht_kg = resterend_gewicht_kg - %s WHERE id = %s;",
+                    (verkocht_kg, batch['id'])
+                )
+                cur.execute(
+                    "INSERT INTO Voorraad_Correcties (voorraad_inkomend_id, aanpassing_kg, reden) VALUES (%s, %s, 'Winkelverkoop');",
+                    (batch['id'], -verkocht_kg)
+                )
+        return jsonify(status="success", message=f"{verkocht_kg} kg succesvol van voorraad afgeboekt.")
+    except Exception as e:
+        conn.rollback()
+        return jsonify(status="error", message=str(e)), 500
+    finally:
+        if conn is not None:
+            conn.close()
+
+@app.route("/api/voorraad/verwijder", methods=['POST'])
+@login_required
+def api_verwijder_voorraad():
+    data = request.get_json()
+    batch_id = data.get('batch_id')
+    conn = get_db_connection()
+    try:
+        with conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT resterend_gewicht_kg FROM Voorraad_Inkomend WHERE id = %s FOR UPDATE;", (batch_id,))
+                batch = cur.fetchone()
+                if not batch: raise Exception("Batch niet gevonden.")
+                
+                verwijderd_kg = batch['resterend_gewicht_kg']
+                cur.execute("UPDATE Voorraad_Inkomend SET resterend_gewicht_kg = 0 WHERE id = %s;", (batch_id,))
+                cur.execute(
+                    "INSERT INTO Voorraad_Correcties (voorraad_inkomend_id, aanpassing_kg, reden) VALUES (%s, %s, 'Vervallen');",
+                    (batch_id, -verwijderd_kg)
+                )
+        return jsonify(status="success", message=f"{verwijderd_kg} kg succesvol verwijderd van voorraad.")
+    except Exception as e:
+        conn.rollback()
+        return jsonify(status="error", message=str(e)), 500
+    finally:
+        if conn is not None:
+            conn.close()
+
 @app.route("/api/rapport/lot/<string:lotnummer>")
 @login_required
 def rapport_lot(lotnummer):
@@ -589,3 +659,4 @@ def verzending_pdf(zending_id):
 
 if __name__ == '__main__':
     app.run(debug=True)
+
