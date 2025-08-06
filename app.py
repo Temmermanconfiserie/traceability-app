@@ -19,7 +19,7 @@ from reportlab.graphics import renderPDF
 # --- App Configuratie ---
 DATABASE_URL = "postgresql://neondb_owner:npg_sU7B0wLzIqVp@ep-soft-frost-a2dtyc79-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'een-zeer-geheim-wachtwoord-dat-niemand-mag-raden' # Verander dit in een willekeurige string
+app.config['SECRET_KEY'] = 'een-zeer-geheim-wachtwoord-dat-niemand-mag-raden'
 
 # --- Login Manager Setup ---
 login_manager = LoginManager()
@@ -778,6 +778,60 @@ def verzending_pdf(zending_id):
     p.save()
     buffer.seek(0)
     return Response(buffer, mimetype='application/pdf', headers={'Content-Disposition': f'attachment; filename=pakbon_{zending_id}.pdf'})
+
+@app.route('/api/voorraad/inkomend/excel')
+@login_required
+def export_inkomende_voorraad():
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("""
+        SELECT ip.productnaam, SUM(vi.resterend_gewicht_kg) as totaal_resterend_kg
+        FROM Voorraad_Inkomend vi
+        JOIN Inkomende_Producten ip ON vi.inkomend_product_id = ip.id
+        GROUP BY ip.productnaam
+        HAVING SUM(vi.resterend_gewicht_kg) > 0.01
+        ORDER BY ip.productnaam;
+    """)
+    data = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    df = pd.DataFrame(data)
+    output = io.BytesIO()
+    writer = pd.ExcelWriter(output, engine='openpyxl')
+    df.to_excel(writer, index=False, sheet_name='Inkomende Voorraad')
+    writer.close()
+    output.seek(0)
+    
+    return Response(output, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": "attachment;filename=inkomende_voorraad.xlsx"})
+
+@app.route('/api/voorraad/afgewerkt/excel')
+@login_required
+def export_afgewerkte_voorraad():
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("""
+        SELECT up.productnaam, SUM(pb.resterend_aantal) as totaal_resterend_stuks
+        FROM Productie_Batch pb
+        JOIN Uitgaande_Producten up ON pb.uitgaand_product_id = up.id
+        GROUP BY up.productnaam
+        HAVING SUM(pb.resterend_aantal) > 0
+        ORDER BY up.productnaam;
+    """)
+    data = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    df = pd.DataFrame(data)
+    output = io.BytesIO()
+    writer = pd.ExcelWriter(output, engine='openpyxl')
+    df.to_excel(writer, index=False, sheet_name='Afgewerkte Voorraad')
+    writer.close()
+    output.seek(0)
+    
+    return Response(output, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": "attachment;filename=afgewerkte_voorraad.xlsx"})
 
 if __name__ == '__main__':
     app.run(debug=True)
