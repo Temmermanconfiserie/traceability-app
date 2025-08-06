@@ -2,38 +2,57 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Leveranciersbeheer - Traceability App</title>
+    <title>Productbeheer - Traceability App</title>
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+        body { font-family: sans-serif; max-width: 900px; margin: auto; padding: 20px; }
         a.button { display: inline-block; text-decoration: none; background-color: #6c757d; color: white; padding: 10px 15px; border-radius: 5px; margin-bottom: 20px; }
         .form-section, .list-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; }
+        .delete-btn { background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
     </style>
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
 </head>
 <body>
     <a href="/" class="button">❮ Terug naar Dashboard</a>
-    <h1>Leveranciersbeheer</h1>
+    <h1>Productbeheer (Inkomend)</h1>
 
     <div class="form-section">
-        <h2>Nieuwe Leverancier Toevoegen</h2>
-        <form id="add-leverancier-form">
-            <label for="leveranciernaam">Leveranciernaam:</label>
-            <input type="text" id="leveranciernaam" required>
-            <button type="submit">Voeg Toe</button>
+        <h2>Nieuw Inkomend Product Toevoegen</h2>
+        <form id="add-product-form" class="form-grid">
+            <div>
+                <label for="referentie">Referentie:</label>
+                <input type="text" id="referentie" required>
+            </div>
+            <div>
+                <label for="productnaam">Productnaam:</label>
+                <input type="text" id="productnaam" required>
+            </div>
+            <div>
+                <label for="ean_code">EAN Code (optioneel):</label>
+                <input type="text" id="ean_code">
+            </div>
+            <div>
+                <label for="houdbaarheid">Houdbaarheid (dagen, optioneel):</label>
+                <input type="number" id="houdbaarheid">
+            </div>
+            <button type="submit" style="grid-column: span 2;">Voeg Product Toe</button>
         </form>
     </div>
 
     <div class="list-section">
-        <h2>Bestaande Leveranciers</h2>
+        <h2>Bestaande Inkomende Producten</h2>
         <table>
-            <thead><tr><th>ID</th><th>Naam</th></tr></thead>
-            <tbody>
-                {% for leverancier in leveranciers %}
+            <thead><tr><th>Referentie</th><th>Productnaam</th><th>EAN Code</th><th>Acties</th></tr></thead>
+            <tbody id="producten-tabel">
+                {% for p in producten %}
                 <tr>
-                    <td>{{ leverancier.id }}</td>
-                    <td>{{ leverancier.naam }}</td>
+                    <td>{{ p.referentie }}</td>
+                    <td>{{ p.productnaam }}</td>
+                    <td>{{ p.ean_code or 'N/A' }}</td>
+                    <td>
+                        <button class="delete-btn" data-ref="{{ p.referentie }}">Verwijder</button>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -41,19 +60,45 @@
     </div>
 
     <script>
-        document.getElementById('add-leverancier-form').addEventListener('submit', async (e) => {
+        // Logica voor het toevoegen van een product (blijft hetzelfde)
+        document.getElementById('add-product-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const naam = document.getElementById('leveranciernaam').value;
-            const response = await fetch('/api/leveranciers', {
+            const data = {
+                referentie: document.getElementById('referentie').value,
+                productnaam: document.getElementById('productnaam').value,
+                ean_code: document.getElementById('ean_code').value,
+                houdbaarheid_dagen: document.getElementById('houdbaarheid').value
+            };
+            const response = await fetch('/api/producten/inkomend', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ naam: naam })
+                body: JSON.stringify(data)
             });
             if (response.ok) {
                 window.location.reload();
             } else {
                 const result = await response.json();
                 alert(`Fout: ${result.message}`);
+            }
+        });
+
+        // NIEUW: Logica voor het verwijderen van een product
+        document.getElementById('producten-tabel').addEventListener('click', async (e) => {
+            if (e.target.classList.contains('delete-btn')) {
+                const productRef = e.target.dataset.ref;
+                
+                if (confirm(`Weet je zeker dat je product ${productRef} wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`)) {
+                    const response = await fetch(`/api/producten/inkomend/${productRef}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        const result = await response.json();
+                        alert(`Fout: ${result.message}`);
+                    }
+                }
             }
         });
     </script>
