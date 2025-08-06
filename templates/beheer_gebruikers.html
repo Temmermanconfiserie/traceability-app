@@ -9,6 +9,7 @@
         .form-section, .list-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; }
+        input, button { padding: 8px; font-size: 1em; }
     </style>
 </head>
 <body>
@@ -25,3 +26,44 @@
             <button type="submit">Voeg Toe</button>
         </form>
     </div>
+
+    <div class="list-section">
+        <h2>Bestaande Gebruikers</h2>
+        <table>
+            <thead><tr><th>ID</th><th>Gebruikersnaam</th><th>Rol</th></tr></thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.role }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="3">Geen gebruikers gevonden.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.getElementById('add-user-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value
+            };
+            const response = await fetch('/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const result = await response.json();
+                alert(`Fout: ${result.message}`);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -8,16 +8,21 @@
         a.button { display: inline-block; text-decoration: none; background-color: #6c757d; color: white; padding: 10px 15px; border-radius: 5px; margin-bottom: 20px; }
         .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
         .form-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; align-items: end; }
-        input, select, button { padding: 8px; font-size: 1em; width: 100%; box-sizing: border-box; }
+        input, select, button { padding: 8px; font-size: 1em; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
         button { color: white; border: none; cursor: pointer; }
-        #stock-display { font-style: italic; color: #555; margin-bottom: 10px; }
+        #stock-display { font-style: italic; color: #555; margin-bottom: 10px; height: 1.2em; }
         #expired-batches-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
         .remove-btn { background-color: #dc3545; }
+        .message { margin-top: 15px; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
     </style>
 </head>
 <body>
     <a href="/" class="button">❮ Terug naar Dashboard</a>
     <h1>Voorraadcorrecties</h1>
+
+    <div id="message-area"></div>
 
     <!-- Sectie voor Winkelverkoop -->
     <div class="section">
@@ -66,14 +71,50 @@
                 return;
             }
             const productRef = productRefElement.dataset.ref;
+            stockDisplay.textContent = 'Voorraad aan het laden...';
             const response = await fetch(`/api/voorraad/inkomend/${productRef}`);
             const data = await response.json();
-            stockDisplay.textContent = `Huidige voorraad: ${data.totaal_resterend.toFixed(2)} kg`;
+            stockDisplay.textContent = `Huidige voorraad: ${parseFloat(data.totaal_resterend).toFixed(2)} kg`;
         });
 
         document.getElementById('verkoop-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            // ... (logica om verkoop te submitten, zie app.py) ...
+            const messageArea = document.getElementById('message-area');
+            messageArea.innerHTML = '';
+
+            const productName = document.getElementById('product_naam_verkoop').value;
+            const productRefElement = document.querySelector(`#producten-lijst option[value="${productName}"]`);
+
+            if (!productRefElement) {
+                alert('Selecteer een geldig product uit de lijst.');
+                return;
+            }
+
+            const data = {
+                referentie: productRefElement.dataset.ref,
+                gewicht_kg: parseFloat(document.getElementById('gewicht_kg').value)
+            };
+
+            const response = await fetch('/api/winkelverkoop', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+
+            if (response.ok) {
+                messageDiv.classList.add('success');
+                messageDiv.textContent = result.message;
+                document.getElementById('verkoop-form').reset();
+                productVerkoopInput.dispatchEvent(new Event('input')); // Refresh de voorraad
+            } else {
+                messageDiv.classList.add('error');
+                messageDiv.textContent = `Fout: ${result.message}`;
+            }
+            messageArea.appendChild(messageDiv);
         });
 
         // --- Vervallen Producten Logica ---
@@ -87,6 +128,7 @@
                 return;
             }
             const productRef = productRefElement.dataset.ref;
+            expiredBatchesList.innerHTML = '<li>Laden...</li>';
             const response = await fetch(`/api/batches/inkomend/${productRef}`);
             const batches = await response.json();
             
