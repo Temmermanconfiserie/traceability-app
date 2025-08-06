@@ -9,8 +9,8 @@
         .form-section, .list-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; }
+        .delete-btn { background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
     </style>
-<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
 </head>
 <body>
     <a href="/" class="button">❮ Terug naar Dashboard</a>
@@ -28,12 +28,21 @@
     <div class="list-section">
         <h2>Bestaande Klanten</h2>
         <table>
-            <thead><tr><th>ID</th><th>Klantnaam</th></tr></thead>
-            <tbody>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Klantnaam</th>
+                    <th>Acties</th>
+                </tr>
+            </thead>
+            <tbody id="klanten-tabel">
                 {% for klant in klanten %}
                 <tr>
                     <td>{{ klant.id }}</td>
                     <td>{{ klant.klantnaam }}</td>
+                    <td>
+                        <button class="delete-btn" data-id="{{ klant.id }}">Verwijder</button>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -41,6 +50,7 @@
     </div>
 
     <script>
+        // Logica voor het toevoegen van een klant (blijft hetzelfde)
         document.getElementById('add-klant-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const naam = document.getElementById('klantnaam').value;
@@ -50,10 +60,30 @@
                 body: JSON.stringify({ klantnaam: naam })
             });
             if (response.ok) {
-                window.location.reload(); // Reload the page to show the new customer
+                window.location.reload();
             } else {
                 const result = await response.json();
                 alert(`Fout: ${result.message}`);
+            }
+        });
+
+        // NIEUW: Logica voor het verwijderen van een klant
+        document.getElementById('klanten-tabel').addEventListener('click', async (e) => {
+            if (e.target.classList.contains('delete-btn')) {
+                const klantId = e.target.dataset.id;
+                
+                if (confirm('Weet je zeker dat je deze klant wilt verwijderen? Dit kan niet ongedaan worden gemaakt.')) {
+                    const response = await fetch(`/api/klanten/${klantId}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        const result = await response.json();
+                        alert(`Fout: ${result.message}`);
+                    }
+                }
             }
         });
     </script>
