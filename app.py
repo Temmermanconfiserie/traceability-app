@@ -18,7 +18,7 @@ from reportlab.graphics import renderPDF
 # --- App Configuratie ---
 DATABASE_URL = "postgresql://neondb_owner:npg_sU7B0wLzIqVp@ep-soft-frost-a2dtyc79-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'een-zeer-geheim-wachtwoord-dat-niemand-mag-raden' # Verander dit in een willekeurige string
+app.config['SECRET_KEY'] = 'een-zeer-geheim-wachtwoord-dat-niemand-mag-raden'
 
 # --- Login Manager Setup ---
 login_manager = LoginManager()
@@ -179,6 +179,7 @@ def voorraad_pagina():
 @app.route("/voorraadcorrecties")
 @login_required
 def voorraadcorrecties_pagina():
+    """Toont de pagina voor winkelverkoop en vervallen producten."""
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     cur.execute("SELECT referentie, productnaam FROM Inkomende_Producten ORDER BY productnaam;")

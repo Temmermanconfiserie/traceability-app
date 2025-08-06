@@ -8,7 +8,8 @@
         a.button { display: inline-block; text-decoration: none; background-color: #6c757d; color: white; padding: 10px 15px; border-radius: 5px; margin-bottom: 20px; }
         .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .list-section { padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
-        table { width: 100%; border-collapse: collapse; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; }
     </style>
 </head>
@@ -18,7 +19,10 @@
 
     <div class="grid-container">
         <div class="list-section">
-            <h2>Inkomende Voorraad (Bulk)</h2>
+            <div class="section-header">
+                <h2>Inkomende Voorraad (Bulk)</h2>
+                <a href="/api/voorraad/inkomend/excel" class="button">Exporteer naar Excel</a>
+            </div>
             <table>
                 <thead><tr><th>Product</th><th>Totaal Resterend (kg)</th></tr></thead>
                 <tbody>
@@ -27,13 +31,18 @@
                         <td>{{ item.productnaam }}</td>
                         <td>{{ "%.2f"|format(item.totaal_resterend) }} kg</td>
                     </tr>
+                    {% else %}
+                    <tr><td colspan="2">Geen inkomende voorraad gevonden.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
 
         <div class="list-section">
-            <h2>Afgewerkte Producten (Verpakt)</h2>
+            <div class="section-header">
+                <h2>Afgewerkte Producten (Verpakt)</h2>
+                <a href="/api/voorraad/afgewerkt/excel" class="button">Exporteer naar Excel</a>
+            </div>
             <table>
                 <thead><tr><th>Product</th><th>Totaal Resterend (stuks)</th></tr></thead>
                 <tbody>
@@ -42,6 +51,8 @@
                         <td>{{ item.productnaam }}</td>
                         <td>{{ item.totaal_resterend }} stuks</td>
                     </tr>
+                    {% else %}
+                    <tr><td colspan="2">Geen afgewerkte voorraad gevonden.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

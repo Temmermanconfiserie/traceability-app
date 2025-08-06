@@ -9,7 +9,7 @@
         .form-section, .list-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; }
-        input, button { padding: 8px; font-size: 1em; }
+        .delete-btn { background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -30,22 +30,24 @@
     <div class="list-section">
         <h2>Bestaande Gebruikers</h2>
         <table>
-            <thead><tr><th>ID</th><th>Gebruikersnaam</th><th>Rol</th></tr></thead>
-            <tbody>
+            <thead><tr><th>ID</th><th>Gebruikersnaam</th><th>Rol</th><th>Acties</th></tr></thead>
+            <tbody id="users-tabel">
                 {% for user in users %}
                 <tr>
                     <td>{{ user.id }}</td>
                     <td>{{ user.username }}</td>
                     <td>{{ user.role }}</td>
+                    <td>
+                        <button class="delete-btn" data-id="{{ user.id }}" {% if user.id == current_user.id %}disabled{% endif %}>Verwijder</button>
+                    </td>
                 </tr>
-                {% else %}
-                <tr><td colspan="3">Geen gebruikers gevonden.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 
     <script>
+        // Logica voor het toevoegen van een gebruiker (blijft hetzelfde)
         document.getElementById('add-user-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const data = {
@@ -62,6 +64,26 @@
             } else {
                 const result = await response.json();
                 alert(`Fout: ${result.message}`);
+            }
+        });
+
+        // NIEUW: Logica voor het verwijderen van een gebruiker
+        document.getElementById('users-tabel').addEventListener('click', async (e) => {
+            if (e.target.classList.contains('delete-btn')) {
+                const userId = e.target.dataset.id;
+                
+                if (confirm('Weet je zeker dat je deze gebruiker wilt verwijderen?')) {
+                    const response = await fetch(`/api/users/${userId}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        const result = await response.json();
+                        alert(`Fout: ${result.message}`);
+                    }
+                }
             }
         });
     </script>
