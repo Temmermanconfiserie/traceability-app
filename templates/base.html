@@ -4,7 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Traceability App{% endblock %}</title>
+    
+    <!-- Link voor de PWA "ID-kaart" -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    
+    <!-- NIEUW: Speciale link voor Apple App Icoon -->
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192x192.png') }}">
+    
     <style>
         body { font-family: sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
         .container { max-width: 1200px; margin: auto; }
@@ -22,9 +28,9 @@
             <a href="/productie">Productie</a>
             <a href="/verzending">Verzending</a>
             <a href="/rapport">Rapport</a>
-            <a href="/beheer/klanten">Beheer Klanten</a>
-            <a href="/beheer/producten">Beheer Producten</a>
-            <a href="/beheer/leveranciers">Beheer Leveranciers</a>
+            <a href="/voorraad">Voorraad</a>
+            <a href="/voorraadcorrecties">Voorraadcorrecties</a>
+            <a href="/beheer/klanten">Beheer</a>
         </nav>
         <div class="content-box">
             {% block content %}{% endblock %}
