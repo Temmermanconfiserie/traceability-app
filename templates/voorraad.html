@@ -24,15 +24,16 @@
                 <a href="/api/voorraad/inkomend/excel" class="button">Exporteer naar Excel</a>
             </div>
             <table>
-                <thead><tr><th>Product</th><th>Totaal Resterend (kg)</th></tr></thead>
+                <thead><tr><th>Referentie</th><th>Product</th><th>Totaal Resterend (kg)</th></tr></thead>
                 <tbody>
                     {% for item in inkomende_voorraad %}
                     <tr>
+                        <td>{{ item.referentie }}</td>
                         <td>{{ item.productnaam }}</td>
                         <td>{{ "%.2f"|format(item.totaal_resterend) }} kg</td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="2">Geen inkomende voorraad gevonden.</td></tr>
+                    <tr><td colspan="3">Geen inkomende voorraad gevonden.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -44,15 +45,16 @@
                 <a href="/api/voorraad/afgewerkt/excel" class="button">Exporteer naar Excel</a>
             </div>
             <table>
-                <thead><tr><th>Product</th><th>Totaal Resterend (stuks)</th></tr></thead>
+                <thead><tr><th>Referentie</th><th>Product</th><th>Totaal Resterend (stuks)</th></tr></thead>
                 <tbody>
                      {% for item in afgewerkte_voorraad %}
                     <tr>
+                        <td>{{ item.referentie }}</td>
                         <td>{{ item.productnaam }}</td>
                         <td>{{ item.totaal_resterend }} stuks</td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="2">Geen afgewerkte voorraad gevonden.</td></tr>
+                    <tr><td colspan="3">Geen afgewerkte voorraad gevonden.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
