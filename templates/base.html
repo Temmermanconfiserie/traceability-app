@@ -14,8 +14,10 @@
     <style>
         body { font-family: sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
         .container { max-width: 1200px; margin: auto; }
-        nav { background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-around; flex-wrap: wrap; }
-        nav a { text-decoration: none; color: #007bff; font-weight: bold; font-size: 1.2em; padding: 10px 15px; }
+        nav { background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; }
+        .nav-row { display: flex; justify-content: center; flex-wrap: wrap; width: 100%; }
+        .nav-row:first-child { margin-bottom: 15px; }
+        nav a { text-decoration: none; color: #007bff; font-weight: bold; font-size: 1.2em; padding: 10px 15px; margin: 5px; }
         .content-box { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     </style>
     {% block head_extra %}{% endblock %}
@@ -23,14 +25,21 @@
 <body>
     <div class="container">
         <nav>
-            <a href="/">Dashboard</a>
-            <a href="/ontvangst">Ontvangst</a>
-            <a href="/productie">Productie</a>
-            <a href="/verzending">Verzending</a>
-            <a href="/rapport">Rapport</a>
-            <a href="/voorraad">Voorraad</a>
-            <a href="/voorraadcorrecties">Voorraadcorrecties</a>
-            <a href="/beheer/klanten">Beheer</a>
+            <div class="nav-row">
+                <a href="/">Dashboard</a>
+                <a href="/ontvangst">Ontvangst</a>
+                <a href="/productie">Productie</a>
+                <a href="/verzending">Verzending</a>
+                <a href="/rapport">Rapport</a>
+                <a href="/voorraad">Voorraad</a>
+                <a href="/voorraadcorrecties">Voorraadcorrecties</a>
+            </div>
+            <div class="nav-row">
+                <a href="/beheer/klanten">Beheer Klanten</a>
+                <a href="/beheer/producten">Beheer Producten</a>
+                <a href="/beheer/leveranciers">Beheer Leveranciers</a>
+                <a href="/beheer/gebruikers">Beheer Gebruikers</a>
+            </div>
         </nav>
         <div class="content-box">
             {% block content %}{% endblock %}
