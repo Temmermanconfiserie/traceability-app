@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Nieuwe Verzending</title>
+    <title>Nieuwe Verzending - Traceability App</title>
     <style>
         body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
         .form-section, .list-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
@@ -19,10 +19,9 @@
         .success a { color: #155724; font-weight: bold; }
         .error { background-color: #f8d7da; color: #721c24; }
     </style>
-<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
 </head>
 <body>
-    <a href="/" class="button">❮ Terug naar Home</a>
+    <a href="/" class="button">❮ Terug naar Dashboard</a>
     <h1>Nieuwe Verzending Registreren</h1>
 
     <div id="message-area"></div>
@@ -77,6 +76,7 @@
             availableLotsList.innerHTML = '<li>Laden...</li>';
             const response = await fetch(`/api/voorraad/product/${productRef}`);
             const availableBatches = await response.json();
+            
             availableLotsList.innerHTML = '';
             if (availableBatches.length > 0) {
                 availableBatches.forEach(batch => {
@@ -151,7 +151,7 @@
                 messageDiv.classList.add('success');
                 messageDiv.innerHTML = `
                     <p>Verzending succesvol geregistreerd!</p>
-                    <a href="/api/verzending/${zending_id}/pdf" target="_blank">Print Pakbon</a>
+                    <a href="/api/verzending/${zending_id}/pdf" class="button" target="_blank">Print Pakbon</a>
                 `;
                 // Reset form
                 shipment = { klant_id: null, factuurnummer: null, loten: [] };
