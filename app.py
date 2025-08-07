@@ -162,15 +162,15 @@ def voorraad_pagina():
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     cur.execute("""
-        SELECT ip.productnaam, SUM(vi.resterend_gewicht_kg) as totaal_resterend
+        SELECT ip.referentie, ip.productnaam, SUM(vi.resterend_gewicht_kg) as totaal_resterend
         FROM Voorraad_Inkomend vi JOIN Inkomende_Producten ip ON vi.inkomend_product_id = ip.id
-        GROUP BY ip.productnaam HAVING SUM(vi.resterend_gewicht_kg) > 0.01 ORDER BY ip.productnaam;
+        GROUP BY ip.referentie, ip.productnaam HAVING SUM(vi.resterend_gewicht_kg) > 0.01 ORDER BY ip.productnaam;
     """)
     inkomende_voorraad = cur.fetchall()
     cur.execute("""
-        SELECT up.productnaam, SUM(pb.resterend_aantal) as totaal_resterend
+        SELECT up.referentie, up.productnaam, SUM(pb.resterend_aantal) as totaal_resterend
         FROM Productie_Batch pb JOIN Uitgaande_Producten up ON pb.uitgaand_product_id = up.id
-        GROUP BY up.productnaam HAVING SUM(pb.resterend_aantal) > 0 ORDER BY up.productnaam;
+        GROUP BY up.referentie, up.productnaam HAVING SUM(pb.resterend_aantal) > 0 ORDER BY up.productnaam;
     """)
     afgewerkte_voorraad = cur.fetchall()
     cur.close()
@@ -712,18 +712,22 @@ def label_lot_pdf(lotnummer):
     conn.close()
     if not data: return "Lotnummer niet gevonden", 404
     buffer = io.BytesIO()
-    p = canvas.Canvas(buffer, pagesize=(60 * mm, 40 * mm))
-    product_name = (data['productnaam'][:30] + '..') if len(data['productnaam']) > 32 else data['productnaam']
-    p.drawString(3 * mm, 32 * mm, product_name)
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(3 * mm, 24 * mm, data['nieuw_lotnummer'])
+    p = canvas.Canvas(buffer, pagesize=(50 * mm, 80 * mm))
+    label_width = 50 * mm
+    product_name = (data['productnaam'][:25] + '..') if len(data['productnaam']) > 27 else data['productnaam']
     p.setFont("Helvetica", 10)
-    p.drawString(3 * mm, 18 * mm, f"THT: {data['nieuwe_tht'].strftime('%d-%m-%Y')}")
+    p.drawCentredString(label_width / 2, 70 * mm, product_name)
+    p.setFont("Helvetica-Bold", 14)
+    p.drawCentredString(label_width / 2, 58 * mm, data['nieuw_lotnummer'])
+    p.setFont("Helvetica", 11)
+    p.drawCentredString(label_width / 2, 48 * mm, f"THT: {data['nieuwe_tht'].strftime('%d-%m-%Y')}")
     if data['ean_code'] and len(data['ean_code']) == 13:
         barcode = eanbc.Ean13BarcodeWidget(data['ean_code'])
-        d = Drawing(50*mm, 12*mm)
+        barcode_width = 48 * mm
+        d = Drawing(barcode_width, 20*mm)
         d.add(barcode)
-        renderPDF.draw(d, p, 3*mm, 3*mm)
+        x_pos = (label_width - barcode_width) / 2
+        renderPDF.draw(d, p, x_pos, 10 * mm)
     p.showPage()
     p.save()
     buffer.seek(0)
@@ -778,60 +782,6 @@ def verzending_pdf(zending_id):
     p.save()
     buffer.seek(0)
     return Response(buffer, mimetype='application/pdf', headers={'Content-Disposition': f'attachment; filename=pakbon_{zending_id}.pdf'})
-
-@app.route('/api/voorraad/inkomend/excel')
-@login_required
-def export_inkomende_voorraad():
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("""
-        SELECT ip.productnaam, SUM(vi.resterend_gewicht_kg) as totaal_resterend_kg
-        FROM Voorraad_Inkomend vi
-        JOIN Inkomende_Producten ip ON vi.inkomend_product_id = ip.id
-        GROUP BY ip.productnaam
-        HAVING SUM(vi.resterend_gewicht_kg) > 0.01
-        ORDER BY ip.productnaam;
-    """)
-    data = cur.fetchall()
-    cur.close()
-    conn.close()
-    
-    df = pd.DataFrame(data)
-    output = io.BytesIO()
-    writer = pd.ExcelWriter(output, engine='openpyxl')
-    df.to_excel(writer, index=False, sheet_name='Inkomende Voorraad')
-    writer.close()
-    output.seek(0)
-    
-    return Response(output, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    headers={"Content-Disposition": "attachment;filename=inkomende_voorraad.xlsx"})
-
-@app.route('/api/voorraad/afgewerkt/excel')
-@login_required
-def export_afgewerkte_voorraad():
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("""
-        SELECT up.productnaam, SUM(pb.resterend_aantal) as totaal_resterend_stuks
-        FROM Productie_Batch pb
-        JOIN Uitgaande_Producten up ON pb.uitgaand_product_id = up.id
-        GROUP BY up.productnaam
-        HAVING SUM(pb.resterend_aantal) > 0
-        ORDER BY up.productnaam;
-    """)
-    data = cur.fetchall()
-    cur.close()
-    conn.close()
-
-    df = pd.DataFrame(data)
-    output = io.BytesIO()
-    writer = pd.ExcelWriter(output, engine='openpyxl')
-    df.to_excel(writer, index=False, sheet_name='Afgewerkte Voorraad')
-    writer.close()
-    output.seek(0)
-    
-    return Response(output, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    headers={"Content-Disposition": "attachment;filename=afgewerkte_voorraad.xlsx"})
 
 if __name__ == '__main__':
     app.run(debug=True)
